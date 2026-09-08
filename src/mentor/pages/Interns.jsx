@@ -2,14 +2,11 @@
 //  MENTOR — pages/Interns.jsx (daily attendance + weekly ratings)
 // ════════════════════════════════════════════════════════════
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
-import { Card, Badge } from "../../shared/components/UI";
-import UserProfileModal from '../../shared/components/UserProfileModal';
+import { Loader2, CheckCircle } from "lucide-react";
+import { Card, Badge, Modal, Input, SectionHeader } from "../../shared/components/UI";
+import UserProfileModal from "../../shared/components/UserProfileModal";
 import api, { getErrorMessage } from "../../lib/api";
 import notify from "../../lib/toast";
-import UserProfileModal from '../../shared/components/UserProfileModal';
-
-import { Modal, Input, SectionHeader } from "../../shared/components/UI";
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -28,7 +25,6 @@ const Interns = () => {
   const [ratingVal, setRatingVal] = useState(8.5);
 
   const [form, setForm] = useState({ name: '', email: '', password: 'User#2026', department: '', role: 'INTERN' });
-
   const [assignedInterns, setAssignedInterns] = useState([]);
 
   const fetchAll = async () => {
@@ -113,7 +109,6 @@ const Interns = () => {
   };
 
   const markAllPresent = async () => {
-    // Strictly mark assigned interns ONLY
     const targets = assignedInterns.length > 0 ? assignedInterns : (filterTab === 'my' ? interns : []);
     if (targets.length === 0) return notify.error("No assigned interns found to mark present.");
 
@@ -329,7 +324,7 @@ const Interns = () => {
               })}
               {interns.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm" style={{ color: "var(--muted)" }}>
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm" style={{ color: "var(--muted)" }}>
                     No interns found under this filter.
                   </td>
                 </tr>
@@ -341,6 +336,7 @@ const Interns = () => {
 
       <UserProfileModal isOpen={!!selectedUserId} onClose={() => setSelectedUserId(null)} userId={selectedUserId} />
 
+      {/* Add Intern Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Intern"
         footer={
           <>

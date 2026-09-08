@@ -132,7 +132,7 @@ def _call_groq(prompt: str):
 
         llm = ChatGroq(
             api_key=api_key,
-            model="llama-3.1-8b-instant",
+            model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             temperature=0.3,
         )
         res = llm.invoke(prompt)

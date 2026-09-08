@@ -16,6 +16,10 @@ const router = Router();
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: config.rateLimit.authMax,
+  keyGenerator: (req) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : 'otp';
+    return `${req.ip}:${email}`;
+  },
   standardHeaders: true,
   legacyHeaders: false,
   message: {

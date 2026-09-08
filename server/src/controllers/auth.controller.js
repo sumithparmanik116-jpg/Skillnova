@@ -30,7 +30,7 @@ import { notify } from "../services/notification.service.js";
 import { PERMISSIONS } from "../middleware/rbac.js";
 
 function parseDurationToMs(val) {
-  if (typeof val === "number") return val;
+  if (typeof val === "number") return val * 1000;
   const match = String(val).match(/^(\d+)(s|m|h|d)$/);
   if (!match) return 600000;
   const n = Number(match[1]);

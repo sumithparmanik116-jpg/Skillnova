@@ -94,7 +94,7 @@ export const isProd = config.isProd;
 
 // ── OAuth State tokens ─────────────────────────────────────
 export function signOAuthState(returnTo = '/') {
-  return jwt.sign({ returnTo, nonce: crypto.randomBytes(8).toString('hex') }, config.jwt.accessSecret, {
+  return jwt.sign({ purpose: 'oauth_state', returnTo, nonce: crypto.randomBytes(8).toString('hex') }, config.jwt.accessSecret, {
     expiresIn: '15m',
     algorithm: ALGO,
     issuer: 'skillnova',

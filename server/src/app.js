@@ -65,18 +65,35 @@ app.use(
   })
 );
 
-// CORS — explicit allow-list
+// CORS — explicit allow-list with Netlify support
+const allowedOrigins = [
+  'https://lovely-biscuit-d6f36d.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5273',
+  'http://localhost:3000',
+];
+
 app.use(
   cors({
     origin: (origin, cb) => {
       // Allow non-browser requests with no origin header (curl, health checks)
       if (!origin) return cb(null, true);
+
+      // Allow known origins and any Netlify preview deploy URLs
+      if (allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
+        return cb(null, true);
+      }
+
       try {
         if (isCorsOriginAllowed(origin)) return cb(null, true);
       } catch (e) {
         logger.warn({ origin, err: e }, 'cors:origin-parse-failed');
       }
-      if (config.corsOrigin && config.corsOrigin.includes(origin)) return cb(null, true);
+
+      if (config.corsOrigin && config.corsOrigin.includes(origin)) {
+        return cb(null, true);
+      }
+
       logger.warn({ origin }, 'cors:rejected');
       cb(new Error('CORS: origin not allowed'));
     },
@@ -90,9 +107,6 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
-
-// Logging (disabled to remove unwanted console lines)
-// if (!config.isProd) app.use(morgan('dev'));
 
 // Global rate limit
 app.use(
@@ -134,15 +148,10 @@ app.get('/healthz', (_req, res) => {
   });
 });
 
-// Liveness — process is up and the event loop is responsive.
-// Does not check downstream dependencies; suitable as a kubelet livenessProbe.
 app.get('/healthz/live', (_req, res) => {
   res.status(200).json({ ok: true, check: 'live' });
 });
 
-// Readiness — every required dependency (DB, Redis) responds to a ping.
-// Suitable as a kubelet readinessProbe; returns 503 when degraded so the
-// load balancer drains traffic until the dependency recovers.
 app.get('/healthz/ready', async (_req, res) => {
   const checks = { db: false, redis: false, pool: { idle: 0, active: 0 } };
   try {

@@ -65,7 +65,7 @@ app.use(
   })
 );
 
-// CORS — explicit allow-list with Netlify support
+// CORS — explicit allow-list with Netlify & preflight support
 const allowedOrigins = [
   'https://lovely-biscuit-d6f36d.netlify.app',
   'http://localhost:5173',
@@ -73,35 +73,40 @@ const allowedOrigins = [
   'http://localhost:3000',
 ];
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Allow non-browser requests with no origin header (curl, health checks)
-      if (!origin) return cb(null, true);
+const corsOptions = {
+  origin: (origin, cb) => {
+    // Allow non-browser requests with no origin header (curl, health checks)
+    if (!origin) return cb(null, true);
 
-      // Allow known origins and any Netlify preview deploy URLs
-      if (allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
-        return cb(null, true);
-      }
+    // Allow configured origins or any Netlify deploy preview
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.netlify.app')
+    ) {
+      return cb(null, true);
+    }
 
-      try {
-        if (isCorsOriginAllowed(origin)) return cb(null, true);
-      } catch (e) {
-        logger.warn({ origin, err: e }, 'cors:origin-parse-failed');
-      }
+    try {
+      if (isCorsOriginAllowed(origin)) return cb(null, true);
+    } catch (e) {
+      logger.warn({ origin, err: e }, 'cors:origin-parse-failed');
+    }
 
-      if (config.corsOrigin && config.corsOrigin.includes(origin)) {
-        return cb(null, true);
-      }
+    if (config.corsOrigin && config.corsOrigin.includes(origin)) {
+      return cb(null, true);
+    }
 
-      logger.warn({ origin }, 'cors:rejected');
-      cb(new Error('CORS: origin not allowed'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    maxAge: 86400,
-  })
-);
+    logger.warn({ origin }, 'cors:rejected');
+    return cb(new Error('CORS: origin not allowed'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-CSRF-Token'],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parsers
 app.use(express.json({ limit: '1mb' }));

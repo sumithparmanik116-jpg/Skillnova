@@ -5,20 +5,9 @@ import { io } from 'socket.io-client';
 
 function getSocketUrl() {
   const configuredUrl = String(import.meta.env.VITE_SOCKET_URL || '').trim();
-  const fallbackUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const rawUrl = configuredUrl || window.location.origin;
 
-  if (!configuredUrl) return fallbackUrl;
-
-  let url = configuredUrl;
-  let protocol = null;
-  let protocolMatch;
-
-  while ((protocolMatch = url.match(/^(https?)(?::?\/\/)/i))) {
-    protocol ??= protocolMatch[1].toLowerCase();
-    url = url.slice(protocolMatch[0].length);
-  }
-
-  return protocol ? `${protocol}://${url}` : configuredUrl;
+  return new URL(rawUrl).origin;
 }
 
 let socket = null;

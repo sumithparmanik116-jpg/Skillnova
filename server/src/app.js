@@ -2,15 +2,13 @@
 //  Express App
 // ════════════════════════════════════════════════════════════
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import fs from 'node:fs';
 
-import { config, isCorsOriginAllowed } from './config/index.js';
+import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { ApiError } from './utils/ApiError.js';
 import prisma from './utils/prisma.js';
@@ -41,6 +39,38 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ── Manual CORS & Preflight Middleware ───────────────────────
+const allowedOrigins = [
+  'https://lovely-biscuit-d6f36d.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5273',
+  'http://localhost:3000',
+];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+    );
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, X-Request-ID'
+    );
+  }
+
+  // Immediately terminate preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+});
+
 // API version header
 app.use((_req, res, next) => {
   res.setHeader('X-API-Version', '1.0.0');
@@ -64,49 +94,6 @@ app.use(
     },
   })
 );
-
-// CORS — explicit allow-list with Netlify & preflight support
-const allowedOrigins = [
-  'https://lovely-biscuit-d6f36d.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:5273',
-  'http://localhost:3000',
-];
-
-const corsOptions = {
-  origin: (origin, cb) => {
-    // Allow non-browser requests with no origin header (curl, health checks)
-    if (!origin) return cb(null, true);
-
-    // Allow configured origins or any Netlify deploy preview
-    if (
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.netlify.app')
-    ) {
-      return cb(null, true);
-    }
-
-    try {
-      if (isCorsOriginAllowed(origin)) return cb(null, true);
-    } catch (e) {
-      logger.warn({ origin, err: e }, 'cors:origin-parse-failed');
-    }
-
-    if (config.corsOrigin && config.corsOrigin.includes(origin)) {
-      return cb(null, true);
-    }
-
-    logger.warn({ origin }, 'cors:rejected');
-    return cb(new Error('CORS: origin not allowed'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-CSRF-Token'],
-  optionsSuccessStatus: 200,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // Body parsers
 app.use(express.json({ limit: '1mb' }));
@@ -224,7 +211,7 @@ app.use('/api/v1', csrfProtection, phase1Routes);
 
 // ── 404 ────────────────────────────────────────────────────
 app.use((req, _res, next) => {
-  next(ApiError.notFound(`Route not found: ${req.method} ${req.originalUrl}`));
+  next(ApiError.notFound(`Route not found: \({req.method}\){req.originalUrl}`));
 });
 
 // ── Centralised error handler ────────────────────────────
@@ -232,11 +219,6 @@ app.use((err, req, res, _next) => {
   if (err instanceof ApiError) {
     logger.warn({ status: err.status, path: req.originalUrl, msg: err.message }, 'api:error');
     return res.status(err.status).json({ error: err.message, details: err.details });
-  }
-
-  // CORS error from upstream
-  if (err.message?.startsWith('CORS')) {
-    return res.status(403).json({ error: err.message });
   }
 
   // Body parse error

@@ -27,14 +27,18 @@ const _taskSchema = z.object({
   dueDate: z.coerce.date().optional(),
 });
 
+const PROJECT_SORT_FIELDS = new Set(['createdAt', 'name', 'status', 'startDate', 'endDate']);
+const TASK_SORT_FIELDS = new Set(['createdAt', 'title', 'status', 'priority', 'dueDate']);
+
 export const listProjects = asyncHandler(async (req, res) => {
   const { page, limit, sort = 'createdAt', order } = req.validatedQuery;
+  const sortField = PROJECT_SORT_FIELDS.has(sort) ? sort : 'createdAt';
   const where = {};
   if (req.query.status) where.status = req.query.status;
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
-      orderBy: { [sort]: order },
+      orderBy: { [sortField]: order },
       skip: (page - 1) * limit,
       take: limit,
       include: {
@@ -90,6 +94,7 @@ export const deleteProject = asyncHandler(async (req, res) => {
 // ── Tasks ──────────────────────────────────────────────────
 export const listTasks = asyncHandler(async (req, res) => {
   const { page, limit, sort = 'dueDate', order } = req.validatedQuery;
+  const sortField = TASK_SORT_FIELDS.has(sort) ? sort : 'dueDate';
   const where = {};
   if (req.user.role === 'INTERN') where.assigneeId = req.user.id;
   else if (req.query.assigneeId) where.assigneeId = req.query.assigneeId;
@@ -100,7 +105,7 @@ export const listTasks = asyncHandler(async (req, res) => {
   const [items, total] = await Promise.all([
     prisma.projectTask.findMany({
       where,
-      orderBy: { [sort]: order },
+      orderBy: { [sortField]: order },
       skip: (page - 1) * limit,
       take: limit,
       include: { assignee: { select: { id: true, name: true, avatarUrl: true } }, project: { select: { id: true, name: true } } },

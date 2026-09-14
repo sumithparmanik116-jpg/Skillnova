@@ -3,21 +3,10 @@
 // ════════════════════════════════════════════════════════════
 import { io } from 'socket.io-client';
 
-function getCleanSocketUrl() {
-  const envUrl = import.meta.env.VITE_SOCKET_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
-    try {
-      const parsed = new URL(envUrl.startsWith('http') ? envUrl : `https://${envUrl}`);
-      return parsed.origin;
-    } catch {
-      // Fall through if parsing fails
-    }
-  }
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
-  }
-  return 'http://localhost:4000';
-}
+const BACKEND_URL = 'https://skillnova-5g99.onrender.com';
+const socketUrl = (import.meta.env.VITE_SOCKET_URL && import.meta.env.VITE_SOCKET_URL.trim() !== '')
+  ? import.meta.env.VITE_SOCKET_URL
+  : BACKEND_URL;
 
 let socket = null;
 let activeToken = null;
@@ -35,7 +24,8 @@ export function connectSocket(token) {
   }
 
   activeToken = token ?? null;
-  socket = io(getCleanSocketUrl(), {
+  socket = io(socketUrl, {
+    autoConnect: true,
     path: '/socket.io',
     transports: ['websocket', 'polling'],
     auth: { token },

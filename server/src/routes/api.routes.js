@@ -21,6 +21,7 @@ api.use(authenticate, requireAuth);
 
 const internIdParam = z.object({ internId: z.string().cuid() });
 const idParam = z.object({ id: z.string().cuid() });
+const projectIdParam = z.object({ id: z.string().min(1).max(100) });
 
 // ── Reports ───────────────────────────────────────────────
 api.get("/reports", requirePermission("reports:read"), validate(schemas.pagination, "query"), reports.list);
@@ -98,7 +99,7 @@ api.post('/attendance/mark', requirePermission('attendance:mark'), validate(z.ob
 
 // ── Projects ──────────────────────────────────────────────
 api.get('/projects', requirePermission('projects:read'), validate(schemas.pagination, 'query'), projects.listProjects);
-api.get('/projects/:id', requirePermission('projects:read'), validate(idParam, 'params'), projects.getProject);
+api.get('/projects/:id', requirePermission('projects:read'), validate(projectIdParam, 'params'), projects.getProject);
 api.post('/projects', requirePermission('projects:create'), validate(z.object({
   name: z.string().min(3).max(120),
   description: z.string().max(2000).optional(),
@@ -106,14 +107,14 @@ api.post('/projects', requirePermission('projects:create'), validate(z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 })), projects.createProject);
-api.patch('/projects/:id', requirePermission('projects:update'), validate(idParam, 'params'), validate(z.object({
+api.patch('/projects/:id', requirePermission('projects:update'), validate(projectIdParam, 'params'), validate(z.object({
   name: z.string().min(3).max(120).optional(),
   description: z.string().max(2000).optional(),
   status: z.enum(['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 })), projects.updateProject);
-api.delete('/projects/:id', requirePermission('projects:delete'), validate(idParam, 'params'), projects.deleteProject);
+api.delete('/projects/:id', requirePermission('projects:delete'), validate(projectIdParam, 'params'), projects.deleteProject);
 
 api.get('/tasks', requirePermission('tasks:read'), validate(schemas.pagination, 'query'), projects.listTasks);
 api.post('/tasks', requirePermission('tasks:create'), validate(z.object({

@@ -16,9 +16,11 @@ const invalidateUser = (id) => {
 
 const ROLES = ['SUPER_ADMIN', 'ADMIN', 'MENTOR', 'INTERN'];
 const STATUSES = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING'];
+const USER_SORT_FIELDS = new Set(['createdAt', 'name', 'email', 'role', 'status', 'department', 'rating', 'lastLoginAt']);
 
 export const list = asyncHandler(async (req, res) => {
   const { page, limit, sort = 'createdAt', order, search } = req.validatedQuery;
+  const sortField = USER_SORT_FIELDS.has(sort) ? sort : 'createdAt';
   const where = {};
   if (search) {
     where.OR = [
@@ -31,12 +33,12 @@ export const list = asyncHandler(async (req, res) => {
   if (req.query.status) where.status = req.query.status;
   if (req.query.department) where.department = req.query.department;
 
-  const cacheKey = `users:list:p${page}:l${limit}:s${sort}:o${order}:q${search || ''}:r${req.query.role || ''}:st${req.query.status || ''}:d${req.query.department || ''}`;
+  const cacheKey = `users:list:p${page}:l${limit}:s${sortField}:o${order}:q${search || ''}:r${req.query.role || ''}:st${req.query.status || ''}:d${req.query.department || ''}`;
   const payload = await lru.wrap(cacheKey, 15, async () => {
     const [items, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        orderBy: { [sort]: order },
+        orderBy: { [sortField]: order },
         skip: (page - 1) * limit,
         take: limit,
       select: {

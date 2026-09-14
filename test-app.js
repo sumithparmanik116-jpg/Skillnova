@@ -12,14 +12,18 @@ import { chromium } from 'playwright';
     }
   });
 
-  console.log('Navigating to Netlify app...');
-  await page.goto('https://lovely-biscuit-d6f36d.netlify.app');
-  
-  // Select Super Admin and click sign in
-  await page.click('text=Super Admin');
-  await page.click('button:has-text("Sign In")');
+  try {
+    console.log('Navigating to Netlify app...');
+    await page.goto('https://lovely-biscuit-d6f36d.netlify.app', { waitUntil: 'domcontentloaded' });
 
-  // Wait 5 seconds to capture all dashboard queries and socket events
-  await page.waitForTimeout(5000);
-  await browser.close();
+    // Select Super Admin and click sign in
+    await page.click('text=Super Admin');
+    await page.click('button:has-text("Sign In")');
+
+    // Inspect the dashboard while capturing API and socket activity.
+    await page.waitForTimeout(5000);
+    console.log('Dashboard URL:', page.url());
+  } finally {
+    await browser.close();
+  }
 })();

@@ -3,11 +3,20 @@
 // ════════════════════════════════════════════════════════════
 import { io } from 'socket.io-client';
 
-function getSocketUrl() {
-  const configuredUrl = String(import.meta.env.VITE_SOCKET_URL || '').trim();
-  const rawUrl = configuredUrl || window.location.origin;
-
-  return new URL(rawUrl).origin;
+function getCleanSocketUrl() {
+  const envUrl = import.meta.env.VITE_SOCKET_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    try {
+      const parsed = new URL(envUrl.startsWith('http') ? envUrl : `https://${envUrl}`);
+      return parsed.origin;
+    } catch {
+      // Fall through if parsing fails
+    }
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'http://localhost:4000';
 }
 
 let socket = null;
@@ -26,7 +35,7 @@ export function connectSocket(token) {
   }
 
   activeToken = token ?? null;
-  socket = io(getSocketUrl(), {
+  socket = io(getCleanSocketUrl(), {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
     auth: { token },
